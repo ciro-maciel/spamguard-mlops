@@ -1,0 +1,32 @@
+# fly.toml
+app = "spamguard-mlflow"
+primary_region = "iad"
+
+[build]
+  dockerfile = "Dockerfile"
+
+[vm]
+  cpu_kind = "shared"
+  cpus = 1
+  memory_mb = 1024
+
+[mounts]
+  source="mlflow_data"
+  destination="/mlflow-data"
+
+# A configuração de serviços abaixo garante uma única máquina que pode ser suspensa.
+[[services]]
+  internal_port = 5000
+  protocol = "tcp"
+
+  # Estas linhas garantem que a máquina desligue quando ociosa e ligue ao receber uma solicitação.
+  auto_stop_machines = true
+  auto_start_machines = true
+
+  [[services.ports]]
+    handlers = ["http"]
+    port = 80
+
+  [[services.ports]]
+    handlers = ["tls", "http"]
+    port = 443
