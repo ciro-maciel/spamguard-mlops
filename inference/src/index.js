@@ -18,8 +18,12 @@ let classifier = null;
 async function loadProductionModel() {
     const prodRun = await db.query.runs.findFirst({ where: eq(schema.runs.isProduction, true) });
     if (prodRun && prodRun.modelArtifactPath) {
-        console.log(`Carregando modelo: ${prodRun.modelArtifactPath}`);
-        const modelJson = await Bun.file(prodRun.modelArtifactPath).text();
+        // Resolve o caminho do artefato. Se for relativo (ex: 'artifacts/...'), resolvemos a partir da raiz do repo.
+        const artifactPath = prodRun.modelArtifactPath.startsWith('/')
+          ? prodRun.modelArtifactPath
+          : new URL(`../../${prodRun.modelArtifactPath}`, import.meta.url).pathname;
+        console.log(`Carregando modelo: ${artifactPath}`);
+        const modelJson = await Bun.file(artifactPath).text();
         classifier = BayesClassifier.restore(JSON.parse(modelJson));
     } else {
         console.log("Nenhum modelo em produção encontrado.");

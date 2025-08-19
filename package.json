@@ -1,7 +1,7 @@
 {
   "name": "spamguard-mlops",
-  "workspaces": ["api", "web"],
+  "workspaces": ["inference", "dashboard", "training"],
   "scripts": {
-    "dev": "bun --watch run api/src/index.js & bun --cwd web run dev"
+    "dev": "bun --watch run inference/src/index.js & bun --cwd dashboard run dev"
   }
 }

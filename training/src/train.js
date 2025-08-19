@@ -1,6 +1,6 @@
 import { Database } from 'bun:sqlite';
 import { drizzle } from 'drizzle-orm/bun-sqlite';
-import * as schema from './db/schema.js';
+import * as schema from '../../inference/src/db/schema.js';
 import { eq } from 'drizzle-orm';
 import natural from 'natural';
 import { promises as fs } from 'fs';
@@ -10,8 +10,9 @@ const { BayesClassifier } = natural;
 async function trainAndEvaluate() {
   console.log('Iniciando o pipeline de treinamento...');
 
-  // Lê o dataset da raiz do monorepo (script roda em api/)
-  const datasetRaw = await fs.readFile('../dataset.csv', 'utf-8');
+  // Lê o dataset centralizado em data/raw/ (relativo a este arquivo)
+  const datasetPath = new URL('../../data/raw/dataset.csv', import.meta.url).pathname;
+  const datasetRaw = await fs.readFile(datasetPath, 'utf-8');
   const dataset = datasetRaw.split('\n').slice(1).map(line => {
     const parts = line.match(/(?:\"([^\"]+)\"|([^,]+)),(.+)/);
     if (!parts) return null;
@@ -31,7 +32,9 @@ async function trainAndEvaluate() {
   const metrics = { f1Score: accuracy, accuracy: accuracy }; // Simplificação
   console.log(`Acurácia do novo modelo: ${metrics.accuracy}`);
 
-  const sqlite = new Database('main.db', { create: true });
+  // Usa o mesmo banco do serviço de inferência (inference/main.db)
+  const dbPath = new URL('../../inference/main.db', import.meta.url).pathname;
+  const sqlite = new Database(dbPath, { create: true });
   const db = drizzle(sqlite, { schema });
 
   // Garante que exista um experimento padrão e obtem seu ID
@@ -76,13 +79,13 @@ async function trainAndEvaluate() {
 
   console.log('Novo modelo é superior! Promovendo para produção.');
   const runId = Date.now();
-  // Salva o artefato dentro de api/artifacts para que a API (rodando do root) encontre com o mesmo path
-  const modelArtifactPath = `api/artifacts/model_${runId}.json`;
+  // Salva o artefato centralizado em artifacts/ na raiz do repo
+  const modelArtifactPath = `artifacts/model_${runId}.json`;
 
-  await fs.mkdir('artifacts', { recursive: true });
+  const artifactDir = new URL('../../artifacts/', import.meta.url).pathname;
+  await fs.mkdir(artifactDir, { recursive: true });
   const classifierJson = JSON.stringify(classifier);
-  // Garante a pasta correta: ao escrever usamos path relativo ao CWD atual (api/). Remova o prefixo 'api/' aqui.
-  await fs.writeFile(`artifacts/model_${runId}.json`, classifierJson);
+  await fs.writeFile(`${artifactDir}model_${runId}.json`, classifierJson);
   console.log(`Modelo salvo em: ${modelArtifactPath}`);
 
   if (currentProdRun) {
