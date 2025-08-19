@@ -1,18 +1,18 @@
-# Infraestrutura (conceitual)
+# Infrastructure (conceptual)
 
-Este diretório contém artefatos de infraestrutura para executar o monorepo em ambientes conteinerizados ou orquestrados.
+This directory contains infrastructure artifacts to run the monorepo in containerized or orchestrated environments.
 
-Estrutura:
+Structure:
 - docker/
-  - Dockerfile.inference: imagem do serviço de inferência (Elysia/Bun)
-  - Dockerfile.dashboard: imagem do dashboard (Vite -> Nginx)
-  - Dockerfile.training: imagem para job de treinamento on-demand
-- docker-compose.yml: orquestração local dos serviços (inference + dashboard). O serviço de training está em profile opcional.
+  - Dockerfile.inference: image for the inference service (Elysia/Bun)
+  - Dockerfile.dashboard: image for the dashboard (Vite -> Nginx)
+  - Dockerfile.training: image for an on-demand training job
+- docker-compose.yml: local orchestration for services (inference + dashboard). The training job is in an optional profile.
 - k8s/
   - inference-deployment.yaml, inference-service.yaml
   - dashboard-deployment.yaml, dashboard-service.yaml
 
-Observações:
-- Artefatos de modelo ficam centralizados em `artifacts/` na raiz e são montados nos containers.
-- O banco SQLite (`inference/main.db`) é compartilhado entre treino e inferência. No compose, o DB é efêmero por simplicidade; pode-se bind-mount conforme necessidade.
-- As imagens no diretório k8s são placeholders; ajuste com seu registry.
+Notes:
+- Model artifacts are centralized under `artifacts/` at the repo root and are mounted into containers.
+- The SQLite database (`inference/main.db`) is shared between training and inference. In compose, the DB is ephemeral for simplicity; you can bind-mount if needed.
+- Images in the k8s directory are placeholders; update them with your registry.

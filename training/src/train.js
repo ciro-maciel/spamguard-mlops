@@ -8,9 +8,9 @@ import { promises as fs } from 'fs';
 const { BayesClassifier } = natural;
 
 async function trainAndEvaluate() {
-  console.log('Iniciando o pipeline de treinamento...');
+  console.log('Starting training pipeline...');
 
-  // Lê o dataset centralizado em data/raw/ (relativo a este arquivo)
+  // Read dataset centralized in data/raw/ (relative to this file)
   const datasetPath = new URL('../../data/raw/dataset.csv', import.meta.url).pathname;
   const datasetRaw = await fs.readFile(datasetPath, 'utf-8');
   const dataset = datasetRaw.split('\n').slice(1).map(line => {
@@ -22,22 +22,22 @@ async function trainAndEvaluate() {
   const classifier = new BayesClassifier();
   dataset.forEach(item => item && classifier.addDocument(item.text, item.label));
   classifier.train();
-  console.log('Modelo treinado.');
+  console.log('Model trained.');
 
   let correct = 0;
   dataset.forEach(item => {
     if (item && classifier.classify(item.text) === item.label) correct++;
   });
   const accuracy = correct / dataset.length;
-  const metrics = { f1Score: accuracy, accuracy: accuracy }; // Simplificação
-  console.log(`Acurácia do novo modelo: ${metrics.accuracy}`);
+  const metrics = { f1Score: accuracy, accuracy: accuracy }; // Simplification
+  console.log(`New model accuracy: ${metrics.accuracy}`);
 
-  // Usa o mesmo banco do serviço de inferência (inference/main.db)
+  // Use the same DB as the inference service (inference/main.db)
   const dbPath = new URL('../../inference/main.db', import.meta.url).pathname;
   const sqlite = new Database(dbPath, { create: true });
   const db = drizzle(sqlite, { schema });
 
-  // Garante que exista um experimento padrão e obtem seu ID
+  // Ensure a default experiment exists and get its ID
   let experimentId = 1;
   try {
     const existing = await db.query.experiments.findFirst({
@@ -53,14 +53,14 @@ async function trainAndEvaluate() {
       experimentId = existing.id;
     }
   } catch (e) {
-    console.warn('Não foi possível verificar/criar experimento padrão:', e?.message || e);
+    console.warn('Could not verify/create default experiment:', e?.message || e);
   }
 
   const currentProdRun = await db.query.runs.findFirst({
     where: eq(schema.runs.isProduction, true),
   });
 
-  // Lê métricas atuais do modelo em produção (podem estar como string JSON)
+  // Read current production model metrics (may be stored as JSON string)
   let currentProdAccuracy = 0;
   if (currentProdRun?.metrics) {
     try {
@@ -70,23 +70,23 @@ async function trainAndEvaluate() {
       currentProdAccuracy = 0;
     }
   }
-  console.log(`Acurácia do modelo em produção: ${currentProdAccuracy}`);
+  console.log(`Production model accuracy: ${currentProdAccuracy}`);
 
   if (metrics.accuracy <= currentProdAccuracy) {
-    console.log('Novo modelo não superou o modelo em produção. Abortando.');
+    console.log('New model did not outperform the production model. Aborting.');
     return;
   }
 
-  console.log('Novo modelo é superior! Promovendo para produção.');
+  console.log('New model is better! Promoting to production.');
   const runId = Date.now();
-  // Salva o artefato centralizado em artifacts/ na raiz do repo
+  // Save artifact centralized under artifacts/ at the repo root
   const modelArtifactPath = `artifacts/model_${runId}.json`;
 
   const artifactDir = new URL('../../artifacts/', import.meta.url).pathname;
   await fs.mkdir(artifactDir, { recursive: true });
   const classifierJson = JSON.stringify(classifier);
   await fs.writeFile(`${artifactDir}model_${runId}.json`, classifierJson);
-  console.log(`Modelo salvo em: ${modelArtifactPath}`);
+  console.log(`Model saved at: ${modelArtifactPath}`);
 
   if (currentProdRun) {
     await db.update(schema.runs).set({ isProduction: false }).where(eq(schema.runs.id, currentProdRun.id));
@@ -101,7 +101,7 @@ async function trainAndEvaluate() {
     isProduction: true,
   });
 
-  console.log('Pipeline de treinamento concluído com sucesso!');
+  console.log('Training pipeline completed successfully!');
 }
 
 trainAndEvaluate();

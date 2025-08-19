@@ -2,10 +2,10 @@
 FROM oven/bun:1
 WORKDIR /app
 
-# Copia o monorepo inteiro (conceitual/simples)
+# Copy the whole monorepo (simple/conceptual)
 COPY . .
 
-# Instala dependências (workspaces)
+# Install dependencies (workspaces)
 RUN bun install --ci
 
 EXPOSE 3001

@@ -8,7 +8,7 @@ import natural from 'natural';
 
 const { BayesClassifier } = natural;
 
-// Resolve caminho do DB relativo a este arquivo (independente do CWD)
+// Resolve DB path relative to this file (independent of CWD)
 const dbPath = new URL('../main.db', import.meta.url).pathname;
 const sqlite = new Database(dbPath);
 const db = drizzle(sqlite, { schema });
@@ -18,15 +18,15 @@ let classifier = null;
 async function loadProductionModel() {
     const prodRun = await db.query.runs.findFirst({ where: eq(schema.runs.isProduction, true) });
     if (prodRun && prodRun.modelArtifactPath) {
-        // Resolve o caminho do artefato. Se for relativo (ex: 'artifacts/...'), resolvemos a partir da raiz do repo.
+        // Resolve artifact path. If it's relative (e.g., 'artifacts/...'), resolve from the repo root.
         const artifactPath = prodRun.modelArtifactPath.startsWith('/')
           ? prodRun.modelArtifactPath
           : new URL(`../../${prodRun.modelArtifactPath}`, import.meta.url).pathname;
-        console.log(`Carregando modelo: ${artifactPath}`);
+        console.log(`Loading model: ${artifactPath}`);
         const modelJson = await Bun.file(artifactPath).text();
         classifier = BayesClassifier.restore(JSON.parse(modelJson));
     } else {
-        console.log("Nenhum modelo em produção encontrado.");
+        console.log("No production model found.");
     }
 }
 
@@ -50,15 +50,15 @@ const app = new Elysia()
   .post('/predict', async ({ body }) => {
     if (!classifier) {
         await loadProductionModel();
-        if(!classifier) return { error: 'Modelo não está carregado' };
+        if(!classifier) return { error: 'Model is not loaded' };
     }
     const prediction = classifier.getClassifications(body.message);
     return { prediction };
   }, {
-    // O `t.Object` é um validador de schema em tempo de execução, útil também em JS.
+    // `t.Object` is a runtime schema validator; useful in JS too.
     body: t.Object({ message: t.String() })
   })
   .listen(3001);
 
-console.log(`API rodando em http://${app.server?.hostname}:${app.server?.port}`);
+console.log(`API running at http://${app.server?.hostname}:${app.server?.port}`);
 loadProductionModel();

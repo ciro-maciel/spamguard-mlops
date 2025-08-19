@@ -5,5 +5,5 @@ WORKDIR /app
 COPY . .
 RUN bun install --ci
 
-# Perfil de job: executa e finaliza
+# Job profile: run and exit
 CMD ["bun", "--cwd", "training", "run", "train"]
