@@ -2,9 +2,9 @@ name: CI/CD
 
 on:
   push:
-    branches: [ main ]
+    branches: [ mlops-concepts, mlops-market-tools ]
   pull_request:
-    branches: [ main ]
+    branches: [ mlops-concepts, mlops-market-tools ]
 
 jobs:
   build-train:

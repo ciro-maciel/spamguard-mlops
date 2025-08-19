@@ -1,3 +1,30 @@
+# SpamGuard MLOps — Landing
+
+This repository highlights two complementary tracks of my MLOps skill set:
+
+- Concepts (baseline): principles, architecture decisions, and end-to-end flow.
+  Branch: mlops-concepts
+
+- Market tools: DVC (data versioning) + MLflow (experiment tracking/model registry),
+  hardened CI/CD and containerized deployment.
+  Branch: mlops-market-tools
+
+How to use:
+- Read this overview and pick the track you’re interested in.
+- Each branch has its own README with Quickstart, decisions, and trade-offs.
+
+What you’ll see:
+- Train → metric-gated promotion → serving
+- Versioned artifacts, schema migrations (Drizzle/SQLite)
+- GitHub Actions CI/CD
+- Docker/Compose and K8s manifests (portability)
+- DVC and MLflow in the market-tools track
+
+Quick links:
+- Concepts: branch mlops-concepts
+- Market tools: branch mlops-market-tools
+- High-level diff: compare mlops-concepts...mlops-market-tools
+
 # SpamGuard MLOps
 
 Production-minded, didactic MLOps template for spam detection. Service-oriented structure with clear seams to evolve from a baseline to production.

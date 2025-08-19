@@ -1,6 +1,6 @@
 # Security (checklist)
 
-Quick checklist for minimal hardening. Deep-dive: `infra/deep-dive/SECURITY.DEEP.md`.
+Quick checklist for minimal hardening.
 
 - AuthN/Z: Protect inference API (API key/JWT). Limit roles for dashboard.
 - Rate limiting: Prevent abuse on `/predict`.
