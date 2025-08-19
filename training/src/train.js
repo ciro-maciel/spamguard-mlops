@@ -1,14 +1,10 @@
-import { Database } from 'bun:sqlite';
-import { drizzle } from 'drizzle-orm/bun-sqlite';
-import * as schema from '../../inference/src/db/schema.js';
-import { eq } from 'drizzle-orm';
 import natural from 'natural';
 import { promises as fs } from 'fs';
 
 const { BayesClassifier } = natural;
 
 async function trainAndEvaluate() {
-  console.log('Starting training pipeline...');
+  console.log('Starting training pipeline with DVC and MLflow...');
 
   // Read dataset centralized in data/raw/ (relative to this file)
   const datasetPath = new URL('../../data/raw/dataset.csv', import.meta.url).pathname;
@@ -32,74 +28,42 @@ async function trainAndEvaluate() {
   const metrics = { f1Score: accuracy, accuracy: accuracy }; // Simplification
   console.log(`New model accuracy: ${metrics.accuracy}`);
 
-  // Use the same DB as the inference service (inference/main.db)
-  const dbPath = new URL('../../inference/main.db', import.meta.url).pathname;
-  const sqlite = new Database(dbPath, { create: true });
-  const db = drizzle(sqlite, { schema });
-
-  // Ensure a default experiment exists and get its ID
-  let experimentId = 1;
-  try {
-    const existing = await db.query.experiments.findFirst({
-      where: eq(schema.experiments.name, 'default'),
-    });
-    if (!existing) {
-      await db.insert(schema.experiments).values({ name: 'default' });
-      const created = await db.query.experiments.findFirst({
-        where: eq(schema.experiments.name, 'default'),
-      });
-      experimentId = created?.id ?? 1;
-    } else {
-      experimentId = existing.id;
-    }
-  } catch (e) {
-    console.warn('Could not verify/create default experiment:', e?.message || e);
-  }
-
-  const currentProdRun = await db.query.runs.findFirst({
-    where: eq(schema.runs.isProduction, true),
-  });
-
-  // Read current production model metrics (may be stored as JSON string)
-  let currentProdAccuracy = 0;
-  if (currentProdRun?.metrics) {
-    try {
-      const m = typeof currentProdRun.metrics === 'string' ? JSON.parse(currentProdRun.metrics) : currentProdRun.metrics;
-      currentProdAccuracy = m?.accuracy || 0;
-    } catch {
-      currentProdAccuracy = 0;
-    }
-  }
-  console.log(`Production model accuracy: ${currentProdAccuracy}`);
-
-  if (metrics.accuracy <= currentProdAccuracy) {
-    console.log('New model did not outperform the production model. Aborting.');
-    return;
-  }
-
-  console.log('New model is better! Promoting to production.');
+  // Save artifact under artifacts/
   const runId = Date.now();
-  // Save artifact centralized under artifacts/ at the repo root
-  const modelArtifactPath = `artifacts/model_${runId}.json`;
-
   const artifactDir = new URL('../../artifacts/', import.meta.url).pathname;
+  const modelArtifactPath = `${artifactDir}model_${runId}.json`;
+
   await fs.mkdir(artifactDir, { recursive: true });
   const classifierJson = JSON.stringify(classifier);
-  await fs.writeFile(`${artifactDir}model_${runId}.json`, classifierJson);
+  await fs.writeFile(modelArtifactPath, classifierJson);
+  // Keep a stable path for the inference demo server
+  await fs.writeFile(`${artifactDir}model_latest.json`, classifierJson);
   console.log(`Model saved at: ${modelArtifactPath}`);
 
-  if (currentProdRun) {
-    await db.update(schema.runs).set({ isProduction: false }).where(eq(schema.runs.id, currentProdRun.id));
+  // Version artifacts with DVC
+  console.log('Versioning artifacts with DVC...');
+  const dvcAddProcess = Bun.spawnSync(['dvc', 'add', 'artifacts']);
+  if (dvcAddProcess.exitCode !== 0) {
+    console.error('DVC Error:', dvcAddProcess.stderr.toString());
+    throw new Error('Failed to version artifacts with DVC');
   }
+  console.log(dvcAddProcess.stdout.toString());
 
-  const gitCommit = Bun.spawnSync(['git', 'rev-parse', '--short', 'HEAD']).stdout.toString().trim();
-  await db.insert(schema.runs).values({
-    experimentId,
-    gitCommit,
-    metrics: JSON.stringify(metrics),
-    modelArtifactPath,
-    isProduction: true,
-  });
+  // Log metrics and artifacts to MLflow via helper script
+  console.log('Logging to MLflow...');
+  const metricsJsonString = JSON.stringify(metrics);
+  const mlflowLogProcess = Bun.spawnSync([
+      'python',
+      new URL('log_mlflow.py', import.meta.url).pathname,
+      metricsJsonString,
+      artifactDir
+  ]);
+
+  if (mlflowLogProcess.exitCode !== 0) {
+      console.error('MLflow Error:', mlflowLogProcess.stderr.toString());
+      throw new Error('Failed to log to MLflow');
+  }
+  console.log(mlflowLogProcess.stdout.toString());
 
   console.log('Training pipeline completed successfully!');
 }
