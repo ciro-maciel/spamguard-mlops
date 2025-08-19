@@ -1,0 +1,29 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: inference
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: inference
+  template:
+    metadata:
+      labels:
+        app: inference
+    spec:
+      containers:
+        - name: inference
+          image: ghcr.io/your-org/spamguard-inference:latest
+          ports:
+            - containerPort: 3001
+          volumeMounts:
+            - name: artifacts
+              mountPath: /app/artifacts
+            - name: inference-data
+              mountPath: /app/inference
+      volumes:
+        - name: artifacts
+          emptyDir: {}
+        - name: inference-data
+          emptyDir: {}

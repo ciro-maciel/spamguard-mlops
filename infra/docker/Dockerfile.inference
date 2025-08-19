@@ -1,0 +1,12 @@
+# syntax=docker/dockerfile:1
+FROM oven/bun:1
+WORKDIR /app
+
+# Copia o monorepo inteiro (conceitual/simples)
+COPY . .
+
+# Instala dependências (workspaces)
+RUN bun install --ci
+
+EXPOSE 3001
+CMD ["bun", "run", "inference/src/index.js"]
