@@ -1,0 +1,19 @@
+{
+  "name": "api",
+  "dependencies": {
+    "@elysiajs/cors": "^1.0.2",
+    "drizzle-orm": "^0.30.10",
+    "elysia": "^1.0.22",
+    "natural": "^6.12.0"
+  },
+  "devDependencies": {
+    "drizzle-kit": "^0.21.4"
+  },
+  "scripts": {
+    "dev": "bun run --watch src/index.js",
+    "start": "bun run src/index.js",
+    "train": "bun run src/train.js",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "bun run src/db/migrate.js"
+  }
+}

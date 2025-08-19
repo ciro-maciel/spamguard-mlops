@@ -1,0 +1,45 @@
+name: CI/CD
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build-train:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: latest
+
+      - name: Install dependencies (workspaces)
+        run: bun install
+
+      - name: Generate DB migrations
+        run: bun --cwd api run db:generate
+
+      - name: Run DB migrations
+        run: bun --cwd api run db:migrate
+
+      - name: Train model
+        run: bun --cwd api run train
+
+      - name: Build web
+        run: bun --cwd web run build
+
+      - name: Upload web artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-dist
+          path: web/dist
+
+      - name: Deploy (placeholder)
+        if: ${{ secrets.FLY_API_TOKEN != '' }}
+        run: |
+          echo "FLY_API_TOKEN detected. Add deployment steps here (e.g., Fly.io)."

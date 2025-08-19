@@ -1,0 +1,7 @@
+{
+  "name": "spamguard-mlops",
+  "workspaces": ["api", "web"],
+  "scripts": {
+    "dev": "bun --watch run api/src/index.js & bun --cwd web run dev"
+  }
+}
