@@ -22,22 +22,22 @@ jobs:
         run: bun install
 
       - name: Generate DB migrations
-        run: bun --cwd api run db:generate
+        run: bun --cwd inference run db:generate
 
       - name: Run DB migrations
-        run: bun --cwd api run db:migrate
+        run: bun --cwd inference run db:migrate
 
       - name: Train model
-        run: bun --cwd api run train
+        run: bun --cwd training run train
 
       - name: Build web
-        run: bun --cwd web run build
+        run: bun --cwd dashboard run build
 
       - name: Upload web artifact
         uses: actions/upload-artifact@v4
         with:
-          name: web-dist
-          path: web/dist
+          name: dashboard-dist
+          path: dashboard/dist
 
       - name: Deploy (placeholder)
         if: ${{ secrets.FLY_API_TOKEN != '' }}
